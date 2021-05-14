@@ -21,7 +21,8 @@ logger = logging.getLogger(__name__)
 class OBSBot(commands.Bot):
     def __init__(self, config_file):
         intents = discord.Intents(bans=True, emojis=True, guilds=True, members=True,
-                                  messages=True, reactions=True, voice_states=False)
+                                  messages=True, reactions=True, voice_states=False,
+                                  guild_messages=True)
         super().__init__(command_prefix='.', help_command=None, intents=intents)
         # enable slash commands
         self.slash = SlashCommand(self)
@@ -52,7 +53,7 @@ class OBSBot(commands.Bot):
         self.supporters = set()
 
     async def on_ready(self):
-        logger.info('OBS Bot ready!')
+        logger.info('MDAnalysis Bot ready!')
         logger.info(f'Name: {self.user} (ID: {self.user.id})')
 
         self.start_time = time.time()

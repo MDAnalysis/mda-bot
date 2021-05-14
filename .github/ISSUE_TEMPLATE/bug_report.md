@@ -1,14 +1,14 @@
 ---
-name: OBS Bot issue report
+name: MDAnalysis Bot issue report
 about: Unexpected behaviours, stuff being broken or not working at all
 labels: ''
 assignees: ''
 ---
 
 <!-- READ THIS FIRST -->
-<!-- This issue page is only for issues with the OBS Discord Bot. -->
-<!-- For OBS Studio issues see the obsproject/obs-studio repo. -->
-<!-- As stated in the README deployments of the bot for communities outside the OBS one are not supported, -->
+<!-- This issue page is only for issues with the MDAnalysis Discord Bot. -->
+<!-- For MDAnalysis Studio issues see the MDAnalysis/mdanalysis repo. -->
+<!-- As stated in the README deployments of the bot for communities outside the MDAnalysis one are not supported, -->
 <!-- you may still open an issue but it might be closed if the issue is deemed to be irrelevant for our purposes. -->
 
 ## Channel, affected user(s) and user group(s)

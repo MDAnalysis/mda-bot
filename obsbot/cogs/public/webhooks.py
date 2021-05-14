@@ -26,7 +26,7 @@ class Webhooks(Cog):
         self.gh_helper = GitHubHelper(bot.session, config['github'], self.bot.state)
 
     async def http_server(self):
-        # Note: Aauthentication for webhooks is handled by nginx, not the bot
+        # Note: Authentication for webhooks is handled by nginx, not the bot
         app = web.Application()
         app.router.add_post('/github', self.github_handler)
         # app.router.add_post('/azurepl', self.azure_handler)
@@ -102,8 +102,8 @@ class Webhooks(Cog):
             if body['check_suite']['app']['slug'] == 'azure-pipelines':
                 return web.Response(text='OK')
 
-            if body['action'] == 'completed':
-                self.bot.loop.create_task(self.fetch_github_ci_results(body))
+            # if body['action'] == 'completed':
+            #     self.bot.loop.create_task(self.fetch_github_ci_results(body))
         elif event == 'discussion':
             # similar to issues/prs, but styled differently
             if body['action'] == 'created':
@@ -115,45 +115,45 @@ class Webhooks(Cog):
 
         return web.Response(text='OK')
 
-    async def fetch_github_ci_results(self, wh_body):
-        result = await self.gh_helper.get_ci_results(wh_body)
-        build_success, embed, update_info = result
-        # only post build result if build failed or status changed (e.g. success->failed)
-        if not build_success or (self.bot.state.get('ci_last_result', False) != build_success):
-            for chan in self.ci_channels:
-                await chan.send(embed=embed)
-        self.bot.state['ci_last_result'] = build_success
+    # async def fetch_github_ci_results(self, wh_body):
+    #     result = await self.gh_helper.get_ci_results(wh_body)
+    #     build_success, embed, update_info = result
+    #     # only post build result if build failed or status changed (e.g. success->failed)
+    #     if not build_success or (self.bot.state.get('ci_last_result', False) != build_success):
+    #         for chan in self.ci_channels:
+    #             await chan.send(embed=embed)
+    #     self.bot.state['ci_last_result'] = build_success
 
-        return await self.add_ci_info_to_messages(*update_info)
+    #     return await self.add_ci_info_to_messages(*update_info)
 
     async def add_messages_to_db(self, messages):
         inserts = [(c, m.channel.id, m.id) for m, c in messages]
         return await self.bot.db.exec_multi(_insert_query.format(self.config['github']['db_table']), inserts)
 
-    async def add_ci_info_to_messages(self, commit_hash, ci_msg, emote, build_url):
-        field_value = f'<:{emote}> [{ci_msg}]({build_url})'
-        # get matching ci messages from DB
-        records = await self.bot.db.query(_select_query.format(self.config['github']['db_table']), commit_hash)
+    # async def add_ci_info_to_messages(self, commit_hash, ci_msg, emote, build_url):
+    #     field_value = f'<:{emote}> [{ci_msg}]({build_url})'
+    #     # get matching ci messages from DB
+    #     records = await self.bot.db.query(_select_query.format(self.config['github']['db_table']), commit_hash)
 
-        for record in records:
-            try:
-                chan = self.bot.get_channel(record['channel_id'])
-                msg = await chan.fetch_message(record['message_id'])
-                embed = msg.embeds[0]
-            except Exception as e:
-                logger.error(f'Getting commit message for editing failed with error {repr(e)}')
-            else:
-                if len(embed.fields) == 2:  # no CI info yet
-                    embed.add_field(name='Continuous Integration',
-                                    value=field_value, inline=False)
-                else:  # append to existing CI info
-                    new_val = '\n'.join((embed.fields[2].value, field_value))
-                    embed.set_field_at(2, name='Continuous Integration',
-                                       value=new_val, inline=False)
-                try:
-                    await msg.edit(embed=embed)
-                except Exception as e:
-                    logger.error(f'Editing commit message failed with error {repr(e)}')
+    #     for record in records:
+    #         try:
+    #             chan = self.bot.get_channel(record['channel_id'])
+    #             msg = await chan.fetch_message(record['message_id'])
+    #             embed = msg.embeds[0]
+    #         except Exception as e:
+    #             logger.error(f'Getting commit message for editing failed with error {repr(e)}')
+    #         else:
+    #             if len(embed.fields) == 2:  # no CI info yet
+    #                 embed.add_field(name='Continuous Integration',
+    #                                 value=field_value, inline=False)
+    #             else:  # append to existing CI info
+    #                 new_val = '\n'.join((embed.fields[2].value, field_value))
+    #                 embed.set_field_at(2, name='Continuous Integration',
+    #                                    value=new_val, inline=False)
+    #             try:
+    #                 await msg.edit(embed=embed)
+    #             except Exception as e:
+    #                 logger.error(f'Editing commit message failed with error {repr(e)}')
 
     def cog_unload(self):
         if self.server:
