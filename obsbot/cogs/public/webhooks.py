@@ -29,7 +29,6 @@ class Webhooks(Cog):
         # Note: Authentication for webhooks is handled by nginx, not the bot
         app = web.Application()
         app.router.add_post('/github', self.github_handler)
-        # app.router.add_post('/azurepl', self.azure_handler)
         runner = web.AppRunner(app)
         await runner.setup()
         self.server = web.TCPSite(runner, 'localhost', self.config['port'])
