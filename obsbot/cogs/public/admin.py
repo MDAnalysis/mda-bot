@@ -34,7 +34,7 @@ class Admin(Cog):
             if section in self.restricted and not is_private:
                 continue
             longest = max(len(cmd) for cmd, _ in commands)
-            content = '\n'.join(f'{cmd}{" " * (longest - len(cmd))} - {helptext}'
+            content = '\n'.join(f'{cmd.ljust(longest)} - {helptext}'
                                 for cmd, helptext in commands)
             embed.add_field(name=section,
                             value=f'```{content}```',
@@ -62,7 +62,7 @@ class Admin(Cog):
                                    f'Aliases:  {len(fac.alias_map)}\n'
                                    f'Total uses:  {total_uses} (since 2018-06-07)'))
 
-        if cron := self.bot.get_cog('Cron'):
+        if _ := self.bot.get_cog('Cron'):
             embed.add_field(name='Cron module', inline=False,
                             value=f'Last Fider ID: {self.bot.state["fider_last_id"]}\n'
                                   f'Last Twitter ID: {self.bot.state["twitter_last_id"]}')

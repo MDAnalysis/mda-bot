@@ -1,6 +1,6 @@
 import logging
 
-from discord import Message, Embed, Member, User
+from discord import Message, Embed, Member
 from discord.ext.commands import Cog, command, Context
 from discord_slash import SlashContext
 
@@ -71,7 +71,7 @@ class Factoids(Cog):
                                        f'ORDER BY "uses" DESC LIMIT {self.config["slash_command_limit"]}')
         # some simple set maths to get new/old/current commands
         commands = set(r['name'] for r in rows)
-        old_commands = set(self.bot.slash.commands.keys())
+        old_commands = set(self.bot.slash.commands.keys()) - {'context'}
         new_commands = commands - old_commands
         old_commands -= commands
 
@@ -134,7 +134,7 @@ class Factoids(Cog):
         # ignore our own messages
         if msg.author == self.bot.user:
             return
-        if not msg.content or msg.content[0] != '!':
+        if not msg.content or len(msg.content) < 2 or msg.content[0] != '!':
             return
         msg_parts = msg.content[1:].split()
 

@@ -22,6 +22,7 @@ ci_channels = [12345678909876654321, 12345678909876654321]
 [webhooks.github]
 commits_channel = 12345678909876654321
 brief_commits_channel = 12345678909876654321
+wiki_channel = 12345678909876654321
 db_table = "commit_messages"
 github_api_auth = "token <token>"
 commit_truncation_limit = 2
@@ -65,3 +66,8 @@ hw_check_enabled = true
 db_table = "hardware_stats"
 channel_blacklist = [12345678909876654321]
 cooldown = 5.0
+
+[onlybans]
+enabled = true
+db_table = "filters"
+log_channel = 12345678909876654321

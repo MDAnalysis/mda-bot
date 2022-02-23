@@ -18,6 +18,7 @@ class GitHubHelper:
     _ci_failed_colour = 0xd0021b
     _ci_some_failed_colour = 0xF5A623
     _ci_passed_colour = 0x7ED321
+    _wiki_colour = 0xf8c8dc
 
     def __init__(self, session, config, state):
         self.session = session
@@ -30,7 +31,7 @@ class GitHubHelper:
 
     async def get_commit_messages(self, event_body, brief=False):
         embed_commits = []
-        branch = event_body['ref'].rpartition('/')[2]
+        branch = event_body['ref'].split('/', 2)[2]
         project = event_body['repository']['full_name']
         commits = event_body['commits']
 
@@ -53,7 +54,7 @@ class GitHubHelper:
 
             if len(commit_message) > 2 and not brief:
                 commit_body = '\n'.join(commit_message[2:])
-                embed.description = commit_body
+                embed.description = commit_body[:4096]
 
             author = await self.get_author_info(author_username)
 
@@ -174,6 +175,24 @@ class GitHubHelper:
             embed.description = event_body['discussion']['body']
 
         return brief_embed, embed
+
+    async def get_wiki_message(self, event_body):
+        embed = Embed(colour=Colour(self._wiki_colour))
+        embed.set_footer(text='GitHub Wiki Changes')
+        # All edits in the response are from a single author
+        author_name = event_body['sender']['login']
+        author = await self.get_author_info(author_name)
+        if author and author['name'] and author['name'] != author['login']:
+            author_name = f'{author["name"]} ({author["login"]})'
+        embed.set_author(name=author_name, url=event_body['sender']['html_url'],
+                         icon_url=event_body['sender']['avatar_url'])
+        body = []
+        for page in event_body['pages']:
+            diff_url = f'{page["html_url"]}/_compare/{page["sha"]}^...{page["sha"]}'
+            page_url = f'{page["html_url"]}/{page["sha"]}'
+            body.append(f'**{page["action"]}:** [{page["title"]}]({page_url}) [[diff]({diff_url})]')
+        embed.description = '\n'.join(body)
+        return embed
 
     async def get_ci_results(self, event_body):
         check_suite_id = event_body['check_suite']['id']
@@ -298,7 +317,7 @@ class GitHubHelper:
     async def get_author_info(self, username):
         if not username:
             return None
-        
+
         if username in self.user_cache:
             # check if data is stale, if not try refetching
             if (time.time() - self.user_cache[username].get('_timestamp', 0)) > self.user_cache_max_age:
