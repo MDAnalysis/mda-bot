@@ -133,3 +133,6 @@ dmypy.json
 
 # ignore private cogs
 obsbot/cogs/private/
+
+# VSCode
+.vscode/
