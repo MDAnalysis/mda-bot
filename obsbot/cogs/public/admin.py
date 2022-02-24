@@ -29,7 +29,7 @@ class Admin(Cog):
             return
         is_private = self.bot.is_private(ctx.channel)
 
-        embed = Embed(title='OBS Bot Help')
+        embed = Embed(title='MDAnalysis Bot Help')
         for section, commands in self.help_sections.items():
             if section in self.restricted and not is_private:
                 continue
@@ -46,7 +46,7 @@ class Admin(Cog):
         if not self.bot.is_admin(ctx.author):
             return
 
-        embed = Embed(title='OBS Bot Status')
+        embed = Embed(title='MDAnalysis Bot Status')
         embed.add_field(name='Core', inline=False,
                         value=(f'Version:  {__version__} - "{__codename__}" Edition\n'
                                f'Uptime:  {time.time() - self.bot.start_time:.0f} seconds\n'))

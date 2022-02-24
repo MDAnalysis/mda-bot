@@ -102,16 +102,17 @@ class OBSBot(commands.Bot):
             return
         raise exception
 
-    async def on_message(self, message):
-        if not isinstance(message.channel, discord.DMChannel):
-            return
-        if message.author == self.user or self.is_supporter(message.author):
-            return
-        if message.content.startswith('.') or message.content.startswith('!'):
-            return
+    # I don't know why these lines to not work for me...
+    # async def on_message(self, message):
+    #     if not isinstance(message.channel, discord.DMChannel):
+    #         return
+    #     if message.author == self.user or self.is_supporter(message.author):
+    #         return
+    #     if message.content.startswith('.') or message.content.startswith('!'):
+    #         return
 
-        await message.channel.send('DMs are not monitored, please use the support channels '
-                                   'in discord.gg/obsproject instead.')
+    #     await message.channel.send('DMs are not monitored, please use the support channels '
+    #                                'in discord.gg/obsproject instead.')
 
     async def close(self):
         logger.info('Cleaning up on close()...')
