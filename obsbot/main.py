@@ -2,11 +2,10 @@ import logging
 import time
 
 import aiohttp
-import discord
+import disnake
 import toml
 
-from discord.ext import commands
-from discord_slash import SlashCommand
+from disnake.ext import commands
 
 from .state_file import StateFile
 from .db import DBHelper
@@ -19,12 +18,9 @@ logger = logging.getLogger(__name__)
 
 class OBSBot(commands.Bot):
     def __init__(self, config_file):
-        intents = discord.Intents(bans=True, emojis=True, guilds=True, members=True,
-                                  messages=True, reactions=True, voice_states=False,
-                                  guild_messages=True)
-        super().__init__(command_prefix='.', help_command=None, intents=intents)
-        # enable slash commands
-        self.slash = SlashCommand(self)
+        intents = disnake.Intents(bans=True, emojis=True, guilds=True, members=True,
+                                  messages=True, reactions=True, voice_states=False)
+        super().__init__(command_prefix='.', help_command=None, intents=intents)  # type: ignore
 
         self.config = toml.load(open(config_file))
         self.state = StateFile(self.config['bot']['state_file'])
@@ -46,10 +42,12 @@ class OBSBot(commands.Bot):
         self.start_time = None
         self.main_guild = None
         self.supporter_role = None
+        self.contrib_role = None
         # admin ids, set via config, but can be changed at runtime
         self.admins = set(self.config['bot']['admins'])
         self.admins.add(self.config['bot']['owner'])
         self.supporters = set()
+        self.contributors = set()
 
     async def on_ready(self):
         logger.info('MDAnalysis Bot ready!')
@@ -61,33 +59,47 @@ class OBSBot(commands.Bot):
         if self.supporter_role:
             for user in self.supporter_role.members:
                 self.supporters.add(user.id)
+        self.contrib_role = self.main_guild.get_role(self.config['bot']['contributor_role'])
+        if self.contrib_role:
+            for user in self.contrib_role.members:
+                self.contributors.add(user.id)
 
         if game := self.state.get('game', None):
-            activity = discord.Game(game)
+            activity = disnake.Game(game)
         elif song := self.state.get('song', None):
-            activity = discord.Activity(name=song, type=discord.ActivityType.listening)
+            activity = disnake.Activity(name=song, type=disnake.ActivityType.listening)
         else:
-            activity = discord.Activity(name='your problems', type=discord.ActivityType.listening)
+            activity = disnake.Activity(name='your problems', type=disnake.ActivityType.listening)
 
         await self.change_presence(activity=activity)
 
-    def is_admin(self, user: discord.Member):
+    def is_admin(self, user: disnake.Member):
         if user.id in self.admins:
             return True
         return False
 
-    def is_supporter(self, user: discord.Member):
+    def is_supporter(self, user: disnake.Member):
         if self.is_admin(user):
             return True
         elif user.id in self.supporters:
             return True
         return False
 
-    @staticmethod
-    def is_private(channel: discord.TextChannel):
-        # DMs
-        if isinstance(channel, discord.DMChannel):
+    def is_contributor(self, user: disnake.User):
+        if user.id in self.admins:
             return True
+        elif user.id in self.contributors:
+            return True
+        return False
+
+    @staticmethod
+    def is_private(channel: disnake.TextChannel):
+        # DMs
+        if isinstance(channel, disnake.DMChannel):
+            return True
+        # For threads, use the parent channel
+        if isinstance(channel, disnake.Thread):
+            channel = channel.parent
         # Guild channels
         if channel.guild.default_role in channel.overwrites:
             if not channel.overwrites[channel.guild.default_role].pair()[0].read_messages:
@@ -102,17 +114,18 @@ class OBSBot(commands.Bot):
             return
         raise exception
 
-    # I don't know why these lines to not work for me...
-    # async def on_message(self, message):
-    #     if not isinstance(message.channel, discord.DMChannel):
-    #         return
-    #     if message.author == self.user or self.is_supporter(message.author):
-    #         return
-    #     if message.content.startswith('.') or message.content.startswith('!'):
-    #         return
-
-    #     await message.channel.send('DMs are not monitored, please use the support channels '
-    #                                'in discord.gg/obsproject instead.')
+    async def on_message(self, message):
+        if (
+            isinstance(message.channel, disnake.DMChannel) and not
+            message.author.bot and not
+            message.content.startswith('.') and not
+            message.content.startswith('!') and not
+            self.is_supporter(message.author)
+        ):
+            await message.channel.send('DMs are not monitored, please use the support '
+                                       'channels in discord.gg/obsproject instead.')
+        else:
+            await self.process_commands(message)
 
     async def close(self):
         logger.info('Cleaning up on close()...')

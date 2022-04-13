@@ -3,7 +3,7 @@ import logging
 import time
 
 import dateutil.parser
-from discord import Embed, Colour
+from disnake import Embed, Colour
 
 logger = logging.getLogger(__name__)
 
@@ -186,6 +186,8 @@ class GitHubHelper:
             author_name = f'{author["name"]} ({author["login"]})'
         embed.set_author(name=author_name, url=event_body['sender']['html_url'],
                          icon_url=event_body['sender']['avatar_url'])
+        embed.add_field(name='Repository', value=event_body['repository']['full_name'])
+
         body = []
         for page in event_body['pages']:
             diff_url = f'{page["html_url"]}/_compare/{page["sha"]}^...{page["sha"]}'
@@ -243,7 +245,7 @@ class GitHubHelper:
         jobs = jobs['jobs']
 
         total_jobs = len(jobs)
-        failed = sum(i['conclusion'] != 'success' for i in jobs)
+        failed = sum(i['conclusion'] not in {'success', 'skipped'} for i in jobs)
         build_success = failed == 0
 
         if failed == 0:
@@ -264,7 +266,9 @@ class GitHubHelper:
 
         if succeeded := [job['name'] for job in jobs if job['conclusion'] == 'success']:
             message.append('**Succeeded:** {}'.format(', '.join(succeeded)))
-        if failed := [job['name'] for job in jobs if job['conclusion'] != 'success']:
+        if skipped := [job['name'] for job in jobs if job['conclusion'] == 'skipped']:
+            message.append('**Skipped:** {}'.format(', '.join(skipped)))
+        if failed := [job['name'] for job in jobs if job['conclusion'] not in {'success', 'skipped'}]:
             message.append('**Failed:** {}'.format(', '.join(failed)))
 
         artifacts = await self.get_with_retry(run['artifacts_url'])
@@ -279,13 +283,15 @@ class GitHubHelper:
                                                f'{check_suite_id}/artifacts/{artifact["id"]}'
             # update nightly build downloads in internal state
             if build_success and branch == 'master':
-                if 'macOS' in artifact['name']:
-                    self.state['nightly_macos'] = self.config['artifact_service'].format(artifact['id'])
-                elif 'win64' in artifact['name']:
+                if 'macos' in artifact['name']:
+                    if 'arm64' in artifact['name']:
+                        self.state['nightly_macos_m1'] = self.config['artifact_service'].format(artifact['id'])
+                    else:
+                        self.state['nightly_macos'] = self.config['artifact_service'].format(artifact['id'])
+                elif 'win-x64' in artifact['name']:
                     self.state['nightly_windows'] = self.config['artifact_service'].format(artifact['id'])
 
-            artifact_name = artifact["name"].rpartition('-')[2]
-            artifacts_entries.append(f'[{artifact_name}]({artifact["archive_download_url"]})')
+            artifacts_entries.append(f'[{artifact["name"]}]({artifact["archive_download_url"]})')
 
         embed = Embed(title=f'Build {run["run_number"]} {build_result}', url=web_url,
                       description='\n'.join(message), timestamp=finished,
